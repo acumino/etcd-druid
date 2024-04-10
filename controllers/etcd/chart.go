@@ -57,13 +57,14 @@ func decodeObjectFromChart[T any](c *chart, etcdName, etcdNs, typeChartPath stri
 		return nil, err
 	}
 	obj := new(T)
-	if content, ok := renderedChart.Files()[typeChartPath]; ok {
-		decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(content)), 1024)
-		if err := decoder.Decode(&obj); err != nil {
-			return nil, err
-		}
-	} else {
+	var content string
+	if _, ok := renderedChart.Files()[typeChartPath]; ok {
 		return nil, fmt.Errorf("requested object does not exist in the given chart template")
+	}
+
+	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(content)), 1024)
+	if err := decoder.Decode(&obj); err != nil {
+		return nil, err
 	}
 	return obj, nil
 }
