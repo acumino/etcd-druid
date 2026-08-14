@@ -168,7 +168,7 @@ func prepareInitialCluster(etcd *druidv1alpha1.Etcd, peerScheme string) string {
 		podName := druidv1alpha1.GetOrdinalPodName(etcd.ObjectMeta, i)
 		memberName := druidv1alpha1.GetMemberName(etcd.Spec.MemberNamePrefix, podName)
 		for _, memberURLs := range etcd.Spec.Etcd.AdditionalAdvertisePeerURLs {
-			if memberURLs.MemberName == podName {
+			if memberURLs.MemberName == memberName {
 				for _, url := range memberURLs.URLs {
 					fmt.Fprintf(&builder, "%s=%s,", memberName, url)
 				}
@@ -219,7 +219,7 @@ func getAdvertiseURLs(etcd *druidv1alpha1.Etcd, advertiseURLType, scheme, peerSv
 			podName := druidv1alpha1.GetOrdinalPodName(etcd.ObjectMeta, i)
 			memberName := druidv1alpha1.GetMemberName(etcd.Spec.MemberNamePrefix, podName)
 			for _, memberURLs := range etcd.Spec.Etcd.AdditionalAdvertisePeerURLs {
-				if memberURLs.MemberName == podName {
+				if memberURLs.MemberName == memberName {
 					advUrlsMap[memberName] = append(advUrlsMap[memberName], memberURLs.URLs...)
 					break
 				}
