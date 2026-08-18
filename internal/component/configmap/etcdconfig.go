@@ -155,12 +155,16 @@ func prepareInitialCluster(etcd *druidv1alpha1.Etcd, peerScheme string) string {
 		for i := range int(etcd.Spec.Replicas) {
 			podName := druidv1alpha1.GetOrdinalPodName(etcd.ObjectMeta, i)
 			memberName := druidv1alpha1.GetMemberName(etcd.Spec.MemberNamePrefix, podName)
-			fmt.Fprintf(&builder, "%s=%s://%s.%s:%s,", memberName, peerScheme, podName, domainName, serverPort)
+			if len(findAdditionalAdvertisePeerURLs(etcd, memberName)) == 0 {
+				fmt.Fprintf(&builder, "%s=%s://%s.%s:%s,", memberName, peerScheme, podName, domainName, serverPort)
+			}
 		}
 	} else {
 		for _, memberAddress := range etcd.Spec.ExternallyManagedMemberAddresses {
 			memberName := druidv1alpha1.GetMemberNameFromAddress(etcd, memberAddress)
-			fmt.Fprintf(&builder, "%s=%s://%s:%s,", memberName, peerScheme, memberAddress, serverPort)
+			if len(findAdditionalAdvertisePeerURLs(etcd, memberName)) == 0 {
+				fmt.Fprintf(&builder, "%s=%s://%s:%s,", memberName, peerScheme, memberAddress, serverPort)
+			}
 		}
 	}
 
@@ -204,12 +208,16 @@ func getAdvertiseURLs(etcd *druidv1alpha1.Etcd, advertiseURLType, scheme, peerSv
 		for i := range int(etcd.Spec.Replicas) {
 			podName := druidv1alpha1.GetOrdinalPodName(etcd.ObjectMeta, i)
 			memberName := druidv1alpha1.GetMemberName(etcd.Spec.MemberNamePrefix, podName)
-			advUrlsMap[memberName] = []string{fmt.Sprintf("%s://%s.%s:%d", scheme, podName, domainName, port)}
+			if advertiseURLType != advertiseURLTypePeer || len(findAdditionalAdvertisePeerURLs(etcd, memberName)) == 0 {
+				advUrlsMap[memberName] = []string{fmt.Sprintf("%s://%s.%s:%d", scheme, podName, domainName, port)}
+			}
 		}
 	} else {
 		for _, memberAddress := range etcd.Spec.ExternallyManagedMemberAddresses {
 			memberName := druidv1alpha1.GetMemberNameFromAddress(etcd, memberAddress)
-			advUrlsMap[memberName] = []string{fmt.Sprintf("%s://%s:%d", scheme, memberAddress, port)}
+			if advertiseURLType != advertiseURLTypePeer || len(findAdditionalAdvertisePeerURLs(etcd, memberName)) == 0 {
+				advUrlsMap[memberName] = []string{fmt.Sprintf("%s://%s:%d", scheme, memberAddress, port)}
+			}
 		}
 	}
 
@@ -227,4 +235,13 @@ func getAdvertiseURLs(etcd *druidv1alpha1.Etcd, advertiseURLType, scheme, peerSv
 		}
 	}
 	return advUrlsMap
+}
+
+func findAdditionalAdvertisePeerURLs(etcd *druidv1alpha1.Etcd, memberName string) []string {
+	for _, memberURLs := range etcd.Spec.Etcd.AdditionalAdvertisePeerURLs {
+		if memberURLs.MemberName == memberName {
+			return memberURLs.URLs
+		}
+	}
+	return nil
 }

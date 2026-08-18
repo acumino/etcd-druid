@@ -201,7 +201,7 @@ func TestPrepareInitialCluster(t *testing.T) {
 			expectedInitialCluster:           "etcd-test-1.1.1.1=https://1.1.1.1:2333,etcd-test-1.1.1.2=https://1.1.1.2:2333,etcd-test-1.1.1.3=https://1.1.1.3:2333",
 		},
 		{
-			name:           "should append additional peer URLs for matching member",
+			name:           "should use only additional peer URLs for member (skip local URL)",
 			etcdReplicas:   2,
 			peerTLSEnabled: false,
 			additionalAdvertisePeerURLs: []druidv1alpha1.MemberPeerURLs{
@@ -210,10 +210,10 @@ func TestPrepareInitialCluster(t *testing.T) {
 					URLs:       []string{"http://10.0.0.1:2380"},
 				},
 			},
-			expectedInitialCluster: "etcd-test-0=http://etcd-test-0.etcd-test-peer.test-ns.svc:2380,etcd-test-1=http://etcd-test-1.etcd-test-peer.test-ns.svc:2380,etcd-test-0=http://10.0.0.1:2380",
+			expectedInitialCluster: "etcd-test-1=http://etcd-test-1.etcd-test-peer.test-ns.svc:2380,etcd-test-0=http://10.0.0.1:2380",
 		},
 		{
-			name:           "should append multiple additional peer URLs for single member",
+			name:           "should use only multiple additional peer URLs for member (skip local URL)",
 			etcdReplicas:   2,
 			peerTLSEnabled: true,
 			additionalAdvertisePeerURLs: []druidv1alpha1.MemberPeerURLs{
@@ -222,10 +222,10 @@ func TestPrepareInitialCluster(t *testing.T) {
 					URLs:       []string{"https://lb-1.example.com:2380", "https://lb-1-backup.example.com:2380"},
 				},
 			},
-			expectedInitialCluster: "etcd-test-0=https://etcd-test-0.etcd-test-peer.test-ns.svc:2380,etcd-test-1=https://etcd-test-1.etcd-test-peer.test-ns.svc:2380,etcd-test-1=https://lb-1.example.com:2380,etcd-test-1=https://lb-1-backup.example.com:2380",
+			expectedInitialCluster: "etcd-test-0=https://etcd-test-0.etcd-test-peer.test-ns.svc:2380,etcd-test-1=https://lb-1.example.com:2380,etcd-test-1=https://lb-1-backup.example.com:2380",
 		},
 		{
-			name:           "should append additional URLs for multiple members",
+			name:           "should skip local URLs for all members that have additional URLs",
 			etcdReplicas:   3,
 			peerTLSEnabled: false,
 			additionalAdvertisePeerURLs: []druidv1alpha1.MemberPeerURLs{
@@ -238,7 +238,7 @@ func TestPrepareInitialCluster(t *testing.T) {
 					URLs:       []string{"http://10.0.0.3:2380"},
 				},
 			},
-			expectedInitialCluster: "etcd-test-0=http://etcd-test-0.etcd-test-peer.test-ns.svc:2380,etcd-test-1=http://etcd-test-1.etcd-test-peer.test-ns.svc:2380,etcd-test-2=http://etcd-test-2.etcd-test-peer.test-ns.svc:2380,etcd-test-0=http://10.0.0.1:2380,etcd-test-2=http://10.0.0.3:2380",
+			expectedInitialCluster: "etcd-test-1=http://etcd-test-1.etcd-test-peer.test-ns.svc:2380,etcd-test-0=http://10.0.0.1:2380,etcd-test-2=http://10.0.0.3:2380",
 		},
 		{
 			name:           "should ignore non-matching member names",
@@ -261,17 +261,17 @@ func TestPrepareInitialCluster(t *testing.T) {
 			expectedInitialCluster: "test-prefix-etcd-test-0=https://etcd-test-0.etcd-test-peer.test-ns.svc:2333,test-prefix-etcd-test-1=https://etcd-test-1.etcd-test-peer.test-ns.svc:2333,test-prefix-etcd-test-2=https://etcd-test-2.etcd-test-peer.test-ns.svc:2333",
 		},
 		{
-			name:             "should use member name prefix in both primary and additional peer URL entries",
+			name:             "should use only additional peer URLs when member name prefix is set (skip local URL)",
 			etcdReplicas:     2,
 			peerTLSEnabled:   false,
 			memberNamePrefix: ptr.To("myprefix"),
 			additionalAdvertisePeerURLs: []druidv1alpha1.MemberPeerURLs{
 				{
-					MemberName: "etcd-test-0",
+					MemberName: "myprefix-etcd-test-0",
 					URLs:       []string{"http://10.0.0.1:2380"},
 				},
 			},
-			expectedInitialCluster: "myprefix-etcd-test-0=http://etcd-test-0.etcd-test-peer.test-ns.svc:2380,myprefix-etcd-test-1=http://etcd-test-1.etcd-test-peer.test-ns.svc:2380,myprefix-etcd-test-0=http://10.0.0.1:2380",
+			expectedInitialCluster: "myprefix-etcd-test-1=http://etcd-test-1.etcd-test-peer.test-ns.svc:2380,myprefix-etcd-test-0=http://10.0.0.1:2380",
 		},
 	}
 	t.Parallel()
@@ -369,7 +369,7 @@ func TestGetAdvertiseURLs(t *testing.T) {
 			},
 		},
 		{
-			name:             "should append additional peer URLs for peer type",
+			name:             "should use only additional peer URLs for member (skip local URL)",
 			etcdReplicas:     2,
 			peerTLSEnabled:   false,
 			advertiseURLType: advertiseURLTypePeer,
@@ -380,7 +380,7 @@ func TestGetAdvertiseURLs(t *testing.T) {
 				},
 			},
 			expectedURLs: map[string][]string{
-				"etcd-test-0": {"http://etcd-test-0.etcd-test-peer.test-ns.svc:2380", "http://10.0.0.1:2380"},
+				"etcd-test-0": {"http://10.0.0.1:2380"},
 				"etcd-test-1": {"http://etcd-test-1.etcd-test-peer.test-ns.svc:2380"},
 			},
 		},
@@ -401,7 +401,7 @@ func TestGetAdvertiseURLs(t *testing.T) {
 			},
 		},
 		{
-			name:             "should append multiple additional peer URLs",
+			name:             "should use only multiple additional peer URLs for member (skip local URL)",
 			etcdReplicas:     2,
 			peerTLSEnabled:   true,
 			advertiseURLType: advertiseURLTypePeer,
@@ -413,7 +413,7 @@ func TestGetAdvertiseURLs(t *testing.T) {
 			},
 			expectedURLs: map[string][]string{
 				"etcd-test-0": {"https://etcd-test-0.etcd-test-peer.test-ns.svc:2380"},
-				"etcd-test-1": {"https://etcd-test-1.etcd-test-peer.test-ns.svc:2380", "https://lb-1.example.com:2380", "https://lb-1-backup.example.com:2380"},
+				"etcd-test-1": {"https://lb-1.example.com:2380", "https://lb-1-backup.example.com:2380"},
 			},
 		},
 		{
